@@ -28,6 +28,7 @@ def show_lowercase_data(file_path):
     output_data = []
     # Create Dataset instance
     train_dataset_lower = PreProcessText(file_path, max_length=10)
+    output_data.append("\n")
     train_dataset_lower.lowercase_text(output_data)
     output_data.append("\n")
     output_data.append("\n")
@@ -51,6 +52,7 @@ def show_after_remove_stop_words_data(file_path):
     output_data = []
     # Create Dataset instance
     train_dataset_remove_stop_words = PreProcessText(file_path, max_length=10)
+    output_data.append("\n")
     train_dataset_remove_stop_words.remove_stop_words(output_data)
     output_data.append("\n")
     output_data.append("\n")
@@ -73,6 +75,7 @@ def show_after_synonym_replacement_data(file_path):
     output_data = []
     # Create Dataset instance
     train_dataset_synonym_replacement = AugmentText(file_path, max_length=10)
+    output_data.append("\n")
     train_dataset_synonym_replacement.synonym_replacement(output_data)
     output_data.append("\n")
     output_data.append("\n")
@@ -95,6 +98,7 @@ def show_after_random_insertion_data(file_path):
     output_data = []
     # Create Dataset instance
     train_dataset_random_insertion = AugmentText(file_path, max_length=10)
+    output_data.append("\n")
     train_dataset_random_insertion.random_insertion(output_data)
     output_data.append("\n")
     output_data.append("\n")
