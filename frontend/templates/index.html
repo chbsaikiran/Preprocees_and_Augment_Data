@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Processing App</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Data Processing Application</h1>
+        
+        <div class="upload-section">
+            <input type="file" id="fileInput" class="file-input">
+            <label for="fileInput" class="file-label">Choose a file</label>
+            <span id="fileName" class="file-name"></span>
+        </div>
+
+        <div class="processing-section">
+            <div class="process-box">
+                <button id="originalBtn" class="action-button">Original Data</button>
+                <div id="originalOutput" class="output-box">
+                    <h3>Original Data Output</h3>
+                    <div class="output-content"></div>
+                </div>
+            </div>
+
+            <div class="process-box">
+                <button id="preprocessBtn" class="action-button">Preprocess Data</button>
+                <div id="preprocessOutput" class="output-box">
+                    <h3>Preprocessing Output</h3>
+                    <div class="output-content"></div>
+                </div>
+            </div>
+
+            <div class="process-box">
+                <button id="augmentBtn" class="action-button">Augment Data</button>
+                <div id="augmentOutput" class="output-box">
+                    <h3>Augmentation Output</h3>
+                    <div class="output-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/script.js"></script>
+</body>
+</html> 
