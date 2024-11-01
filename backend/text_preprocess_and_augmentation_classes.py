@@ -46,8 +46,11 @@ class PreProcessText(TextDataset):
         """
         Converts all characters in the input sentence to lowercase.
         """
+        idx = 0
         for lines in self.lines:
             lines = lines.lower()
+            self.lines[idx] = lines
+            idx = idx + 1
             output_data.append(str(lines))
 
     def remove_stop_words(self,output_data):
@@ -55,15 +58,19 @@ class PreProcessText(TextDataset):
         Removes common stop words from the input sentence.
         """
         stop_words = {'the', 'is', 'and', 'in', 'on', 'at', 'to', 'with', 'a', 'an'}  # Example set of stop words
+        idx = 0
         for lines in self.lines:
             words = lines.split()
             filtered_words = [word for word in words if word.lower() not in stop_words]
             lines = ' '.join(filtered_words)
+            self.lines[idx] = lines
+            idx = idx + 1
             output_data.append(str(lines))
             output_data.append("\n")
 
 class AugmentText(TextDataset):
     def synonym_replacement(self,output_data,n=1):
+        idx = 0
         for lines in self.lines:
             words = word_tokenize(lines)
             new_words = words.copy()
@@ -80,6 +87,8 @@ class AugmentText(TextDataset):
                     break
             
             lines = ' '.join(new_words)
+            self.lines[idx] = lines
+            idx = idx + 1
             output_data.append(str(lines))
             output_data.append("\n")
 
@@ -98,6 +107,7 @@ class AugmentText(TextDataset):
         """
         Randomly inserts 'n' synonyms of random words into the sentence.
         """
+        idx = 0
         for lines in self.lines:
             words = word_tokenize(lines)
             for _ in range(n):
@@ -107,6 +117,8 @@ class AugmentText(TextDataset):
                     words.insert(insert_position, new_word)
             
             lines = ' '.join(words)
+            self.lines[idx] = lines
+            idx = idx + 1
             output_data.append(str(lines))
             output_data.append("\n")
 
