@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi import Depends
 import os
 import traceback
 import mimetypes
@@ -88,14 +89,40 @@ app.add_middleware(
 # Mount the static files directory
 app.mount("/static", StaticFiles(directory="../frontend/static"), name="static")
 
+class InOutFileNames:
+    def __init__(self):
+        self.input_path = None
+
+    def save_in_out_file_name(self, input_path: str):
+        self.input_path = input_path
+        logger.info(f"Input path set to: {self.input_path}")
+
+    def get_in_out_file_name(self):
+        if self.input_path:
+            return self.input_path
+        else:
+            raise HTTPException(status_code=400, detail="No input path found")
+
+# Global instance of InOutFileNames
+InOutFileNames_obj = InOutFileNames()
+
 @app.get("/")
 async def read_root():
     return FileResponse("../frontend/templates/index.html")
+
+#@app.post("/api/save_in_out_file_name/")
+#async def save_in_out_file_name(file: UploadFile = File(...)):
+#    file_location = f"uploaded_{file.filename}"
+#    with open(file_location, "wb") as f:
+#        f.write(await file.read())
+#    InOutFileNames_obj.save_in_out_file_name(file_location)
+#    return {"message": "File path saved successfully", "file_path": file_location}
 
 @app.post("/api/preprocess")
 async def preprocess_data(file: UploadFile = File(...)):
     try:
         if file.filename.endswith('.wav'):
+            InOutFileNames_obj.save_in_out_file_name(file.filename)
             return {"type": "audio", "audioPath": "/api/audio/preprocessed"}
             
         temp_file_path = f"temp_{file.filename}"
@@ -131,6 +158,7 @@ async def preprocess_data(file: UploadFile = File(...)):
 async def augment_data(file: UploadFile = File(...)):
     try:
         if file.filename.endswith('.wav'):
+            InOutFileNames_obj.save_in_out_file_name(file.filename)
             return {"type": "audio", "audioPath": "/api/audio/augmented"}
             
         temp_file_path = f"temp_{file.filename}"
@@ -168,6 +196,7 @@ async def original_data(file: UploadFile = File(...)):
         logger.info(f"Received file: {file.filename}")
         
         if file.filename.endswith('.wav'):
+            InOutFileNames_obj.save_in_out_file_name(file.filename)
             # For WAV files, return the path to the audio file
             return {"type": "audio", "audioPath": "/api/audio/original"}
         
@@ -198,6 +227,11 @@ async def original_data(file: UploadFile = File(...)):
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
+#@app.get("/api/get_in_out_file_name/")
+#async def get_in_out_file_name(InOutFileNames_objstore: InOutFileNames = Depends(lambda: InOutFileNames_obj)):
+#    input_path = InOutFileNames_objstore.get_in_out_file_name()
+#    return {"input_path": input_path}
+
 # New endpoints to serve audio files
 @app.get("/api/audio/original")
 async def get_original_audio():
@@ -206,7 +240,7 @@ async def get_original_audio():
     
     # Create Dataset and DataLoader
     audio_dataset = AudioDataset(
-        file_path = "Saikiran_16bit_16khz.wav",
+        file_path = InOutFileNames_obj.get_in_out_file_name(),
         transformation=transformation,
         target_sample_rate=16000
     )
@@ -238,7 +272,7 @@ async def get_preprocessed_audio():
     transformation = torchaudio.transforms.MFCC(sample_rate=16000, n_mfcc=40)
 
     preprocess_audio_dataset = PreProcessAudio(
-    file_path = "Saikiran_16bit_16khz.wav",
+    file_path = InOutFileNames_obj.get_in_out_file_name(),
     transformation=transformation,
     target_sample_rate=16000
     )
@@ -273,7 +307,7 @@ async def get_augmented_audio():
     transformation = torchaudio.transforms.MFCC(sample_rate=16000, n_mfcc=40)
 
     augment_audio_dataset = AugmentAudio(
-    file_path = "Saikiran_16bit_16khz.wav",
+    file_path = InOutFileNames_obj.get_in_out_file_name(),
     transformation=transformation,
     target_sample_rate=16000
     )
