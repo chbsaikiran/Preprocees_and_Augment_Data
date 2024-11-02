@@ -1,9 +1,10 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 import os
 import traceback
+import mimetypes
 
 import text_preprocess_and_augmentation_main
 from text_preprocess_and_augmentation_main import show_original_data,show_lowercase_data,\
@@ -36,6 +37,9 @@ async def read_root():
 @app.post("/api/preprocess")
 async def preprocess_data(file: UploadFile = File(...)):
     try:
+        if file.filename.endswith('.wav'):
+            return {"type": "audio", "audioPath": "/api/audio/preprocessed"}
+            
         temp_file_path = f"temp_{file.filename}"
         
         try:
@@ -68,6 +72,9 @@ async def preprocess_data(file: UploadFile = File(...)):
 @app.post("/api/augment")
 async def augment_data(file: UploadFile = File(...)):
     try:
+        if file.filename.endswith('.wav'):
+            return {"type": "audio", "audioPath": "/api/audio/augmented"}
+            
         temp_file_path = f"temp_{file.filename}"
         
         try:
@@ -102,6 +109,11 @@ async def original_data(file: UploadFile = File(...)):
     try:
         logger.info(f"Received file: {file.filename}")
         
+        if file.filename.endswith('.wav'):
+            # For WAV files, return the path to the audio file
+            #audio_path = "backend/audio/output_audio_int16.wav"
+            return {"type": "audio", "audioPath": "/api/audio/original"}
+        
         # Create a temporary file with a unique name
         temp_file_path = f"temp_{file.filename}"
         
@@ -129,6 +141,30 @@ async def original_data(file: UploadFile = File(...)):
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
+# New endpoints to serve audio files
+@app.get("/api/audio/original")
+async def get_original_audio():
+    return FileResponse(
+        "../backend/audio/output_audio_int16.wav",
+        media_type="audio/wav",
+        filename="original.wav"
+    )
+
+@app.get("/api/audio/preprocessed")
+async def get_preprocessed_audio():
+    return FileResponse(
+        "../backend/audio/reduced_noise_output_audio.wav",
+        media_type="audio/wav",
+        filename="preprocessed.wav"
+    )
+
+@app.get("/api/audio/augmented")
+async def get_augmented_audio():
+    return FileResponse(
+        "../backend/audio/output_audio_pitch_shifted.wav",
+        media_type="audio/wav",
+        filename="augmented.wav"
+    )
 
 if __name__ == "__main__":
     import uvicorn

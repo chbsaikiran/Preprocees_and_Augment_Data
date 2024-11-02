@@ -48,7 +48,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const data = await response.json();
-            originalOutput.textContent = data.output;
+            
+            if (data.type === 'audio') {
+                originalOutput.innerHTML = `
+                    <audio controls>
+                        <source src="${data.audioPath}" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                `;
+            } else {
+                originalOutput.textContent = data.output;
+            }
         } catch (error) {
             console.error('Error:', error);
             originalOutput.textContent = `Error: ${error.message}\nPlease make sure the backend server is running on port 8000`;
@@ -75,11 +85,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const data = await response.json();
-            preprocessOutput.textContent = 
-                "Lowercase Data:\n" +
-                data.lowercase_data + 
-                "\n\nAfter Remove Stop Words:\n" +
-                data.after_remove_stop_words_data;
+            
+            if (data.type === 'audio') {
+                preprocessOutput.innerHTML = `
+                    <audio controls>
+                        <source src="${data.audioPath}" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                `;
+            } else {
+                preprocessOutput.textContent = 
+                    "Lowercase Data:\n" +
+                    data.lowercase_data + 
+                    "\n\nAfter Remove Stop Words:\n" +
+                    data.after_remove_stop_words_data;
+            }
         } catch (error) {
             console.error('Error:', error);
             preprocessOutput.textContent = `Error: ${error.message}\nPlease make sure the backend server is running on port 8000`;
@@ -106,11 +126,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const data = await response.json();
-            augmentOutput.textContent = 
-                "Synonym Replacement:\n" +
-                data.synonym_replacement_data +
-                "\n\nRandom Insertion:\n" +
-                data.random_insertion_data;
+            
+            if (data.type === 'audio') {
+                augmentOutput.innerHTML = `
+                    <audio controls>
+                        <source src="${data.audioPath}" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                `;
+            } else {
+                augmentOutput.textContent = 
+                    "Synonym Replacement:\n" +
+                    data.synonym_replacement_data +
+                    "\n\nRandom Insertion:\n" +
+                    data.random_insertion_data;
+            }
         } catch (error) {
             console.error('Error:', error);
             augmentOutput.textContent = `Error: ${error.message}\nPlease make sure the backend server is running on port 8000`;
