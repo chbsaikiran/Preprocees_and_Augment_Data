@@ -220,13 +220,21 @@ async def get_original_audio():
         output_path = 'original.wav'
         torchaudio.save(output_path, original_signal[0], original_sr, encoding="PCM_S", bits_per_sample=16)
 
-        #wave_obj = sa.WaveObject.from_wave_file(output_path)
+        # MFCC output will be 3D: [channels, features (MFCC coefficients), time_steps]
+        # Take the first channel (mono) and transpose it to plot (time on x-axis)
+        signal_mfcc = signal[0].numpy()
+        signal_mfcc = np.squeeze(signal_mfcc)
+        if isinstance(audio_sample_path, tuple):
+            audio_sample_path = audio_sample_path[0]
 
-        # Play the .wav file
-        #play_obj = wave_obj.play()
-
-        # Wait for the playback to finish
-        #play_obj.wait_done()
+        plt.figure(figsize=(10, 4))
+        plt.imshow(signal_mfcc, cmap='viridis', origin='lower', aspect='auto')
+        plt.colorbar(format="%+2.0f dB")
+        plt.title(f"MFCC for {os.path.basename(audio_sample_path)}")
+        plt.xlabel("Time")
+        plt.ylabel("MFCC Coefficients")
+        plt.savefig('original.png', dpi=300, bbox_inches='tight')
+        plt.close()  # Close the plot to free memory
 
         return FileResponse(
             output_path,
@@ -252,13 +260,6 @@ async def get_preprocessed_audio():
 
     signal,label, audio_sample_path, sr, original_signal, original_sr = next(iter(preprocess_audio_loader))
 
-    input_path1 = preprocess_audio_dataset.file_path
-    signal1, sr1 = librosa.load(input_path1, sr=None)
-
-    # MFCC output will be 3D: [channels, features (MFCC coefficients), time_steps]
-    # Take the first channel (mono) and transpose it to plot (time on x-axis)
-    signal_mfcc = signal[0].numpy()  # Take the first channel
-
     original_signal = original_signal[0].numpy()
     original_signal = original_signal.reshape(-1)
 
@@ -268,13 +269,21 @@ async def get_preprocessed_audio():
     output_path = 'preprocessed.wav'
     sf.write(output_path, reduced_noise_signal, original_sr.numpy()[0])
 
-    #wave_obj = sa.WaveObject.from_wave_file(output_path)
+    # MFCC output will be 3D: [channels, features (MFCC coefficients), time_steps]
+    # Take the first channel (mono) and transpose it to plot (time on x-axis)
+    signal_mfcc = signal[0].numpy()
+    signal_mfcc = np.squeeze(signal_mfcc)
+    if isinstance(audio_sample_path, tuple):
+        audio_sample_path = audio_sample_path[0]
 
-    # Play the .wav file
-    #play_obj = wave_obj.play()
-
-    # Wait for the playback to finish
-    #play_obj.wait_done()
+    plt.figure(figsize=(10, 4))
+    plt.imshow(signal_mfcc, cmap='viridis', origin='lower', aspect='auto')
+    plt.colorbar(format="%+2.0f dB")
+    plt.title(f"MFCC for {os.path.basename(audio_sample_path)}")
+    plt.xlabel("Time")
+    plt.ylabel("MFCC Coefficients")
+    plt.savefig('preprocessed.png', dpi=300, bbox_inches='tight')
+    plt.close()  # Close the plot to free memory
 
     return FileResponse(
         output_path,
@@ -296,28 +305,33 @@ async def get_augmented_audio():
 
     signal, label, audio_sample_path, sr, original_signal, original_sr = next(iter(augment_audio_loader))
 
-    # MFCC output will be 3D: [channels, features (MFCC coefficients), time_steps]
-    # Take the first channel (mono) and transpose it to plot (time on x-axis)
-    signal_mfcc = signal[0].numpy()  # Take the first channel
-
     original_signal = original_signal[0].numpy()
     original_signal = original_signal.reshape(-1)
 
     shifted_signal = librosa.effects.pitch_shift(original_signal, sr=original_sr.numpy()[0], n_steps=4)
     output_path = 'augmented.wav'
     sf.write(output_path, shifted_signal, original_sr.numpy()[0])
-    #wave_obj = sa.WaveObject.from_wave_file(output_path)
 
-    # Play the .wav file
-    #play_obj = wave_obj.play()
+    # MFCC output will be 3D: [channels, features (MFCC coefficients), time_steps]
+    # Take the first channel (mono) and transpose it to plot (time on x-axis)
+    signal_mfcc = signal[0].numpy()
+    signal_mfcc = np.squeeze(signal_mfcc)
+    if isinstance(audio_sample_path, tuple):
+        audio_sample_path = audio_sample_path[0]
 
-    # Wait for the playback to finish
-    #play_obj.wait_done()
+    plt.figure(figsize=(10, 4))
+    plt.imshow(signal_mfcc, cmap='viridis', origin='lower', aspect='auto')
+    plt.colorbar(format="%+2.0f dB")
+    plt.title(f"MFCC for {os.path.basename(audio_sample_path)}")
+    plt.xlabel("Time")
+    plt.ylabel("MFCC Coefficients")
+    plt.savefig('augmented.png', dpi=300, bbox_inches='tight')
+    plt.close()  # Close the plot to free memory
 
     return FileResponse(
         output_path,
         media_type="audio/wav",
-        filename="augmented.wav"
+        filename="augmented1.wav"
     )
 
 if __name__ == "__main__":
