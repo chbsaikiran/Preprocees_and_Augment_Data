@@ -113,18 +113,34 @@ async def read_root():
 @app.post("/api/save_in_out_file_name/")
 async def save_in_out_file_name(file: UploadFile = File(...)):
     try:
-        # For text files, read content directly
-        #if file.filename.endswith('.txt'):
-        #    contents = await file.read()
-        #    InOutFileNames_obj.save_in_out_file_name(contents.decode())
-        #else:
-        InOutFileNames_obj.save_in_out_file_name(file.filename)
+        # Save the contents of the uploaded file to a temporary location
+        temp_file_path = os.path.join(os.getcwd(), "temp_uploads", file.filename)
+        os.makedirs(os.path.dirname(temp_file_path), exist_ok=True)
+        
+        contents = await file.read()
+        with open(temp_file_path, "wb") as f:
+            f.write(contents)
             
-        logger.info(f"Saved file content/path")
-        return {"message": "File saved successfully", "file_path": file.filename}
+        # Save the full path
+        InOutFileNames_obj.save_in_out_file_name(temp_file_path)
+        logger.info(f"Saved file to: {temp_file_path}")
+        
+        return {"message": "File saved successfully", "file_path": temp_file_path}
     except Exception as e:
         logger.error(f"Error saving file: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Add cleanup function
+def cleanup_temp_files():
+    temp_dir = os.path.join(os.getcwd(), "temp_uploads")
+    if os.path.exists(temp_dir):
+        for file in os.listdir(temp_dir):
+            file_path = os.path.join(temp_dir, file)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                logger.error(f"Error deleting {file_path}: {str(e)}")
 
 @app.post("/api/preprocess")
 async def preprocess_data(file: UploadFile = File(...)):
@@ -174,6 +190,7 @@ async def augment_data(file: UploadFile = File(...)):
 async def original_data(file: UploadFile = File(...)):
     try:
         logger.info(f"Received file: {file.filename}")
+        #cleanup_temp_files()  # Clean up old files
         
         if file.filename.endswith('.wav'):
             return {"type": "audio", "audioPath": "/api/audio/original"}
@@ -196,36 +213,45 @@ async def get_in_out_file_name(InOutFileNames_objstore: InOutFileNames = Depends
 # New endpoints to serve audio files
 @app.get("/api/audio/original")
 async def get_original_audio():
-    # Define transformations
-    transformation = torchaudio.transforms.MFCC(sample_rate=16000, n_mfcc=40)
-    
-    # Create Dataset and DataLoader
-    audio_dataset = AudioDataset(
-        file_path = InOutFileNames_obj.get_in_out_file_name(),
-        transformation=transformation,
-        target_sample_rate=16000
-    )
-    audio_loader = DataLoader(audio_dataset, batch_size=1, shuffle=True)
+    try:
+        # Define transformations
+        transformation = torchaudio.transforms.MFCC(sample_rate=16000, n_mfcc=40)
+        
+        file_path = InOutFileNames_obj.get_in_out_file_name()
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Audio file not found")
+        
+        # Create Dataset and DataLoader
+        audio_dataset = AudioDataset(
+            file_path=file_path,
+            transformation=transformation,
+            target_sample_rate=16000
+        )
+        audio_loader = DataLoader(audio_dataset, batch_size=1, shuffle=True)
 
-    signal, label, audio_sample_path, sr, original_signal, original_sr = next(iter(audio_loader))
+        signal, label, audio_sample_path, sr, original_signal, original_sr = next(iter(audio_loader))
 
-    # Save the waveform in 16-bit PCM format
-    output_path = 'output_audio_int16.wav'
-    torchaudio.save(output_path, original_signal[0], original_sr, encoding="PCM_S", bits_per_sample=16)
+        # Save the waveform in 16-bit PCM format
+        output_path = 'output_audio_int16.wav'
+        torchaudio.save(output_path, original_signal[0], original_sr, encoding="PCM_S", bits_per_sample=16)
 
-    #wave_obj = sa.WaveObject.from_wave_file(output_path)
+        #wave_obj = sa.WaveObject.from_wave_file(output_path)
 
-    # Play the .wav file
-    #play_obj = wave_obj.play()
+        # Play the .wav file
+        #play_obj = wave_obj.play()
 
-    # Wait for the playback to finish
-    #play_obj.wait_done()
+        # Wait for the playback to finish
+        #play_obj.wait_done()
 
-    return FileResponse(
-        output_path,
-        media_type="audio/wav",
-        filename="original.wav"
-    )
+        return FileResponse(
+            output_path,
+            media_type="audio/wav",
+            filename="original.wav"
+        )
+    except Exception as e:
+        logger.error(f"Error in endpoint: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/audio/preprocessed")
 async def get_preprocessed_audio():
