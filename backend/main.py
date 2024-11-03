@@ -113,17 +113,15 @@ async def read_root():
 @app.post("/api/save_in_out_file_name/")
 async def save_in_out_file_name(file: UploadFile = File(...)):
     try:
-        # Save the uploaded file to a temporary location
-        temp_file_path = f"temp_upload_{file.filename}"
-        contents = await file.read()
-        with open(temp_file_path, "wb") as f:
-            f.write(contents)
+        # For text files, read content directly
+        #if file.filename.endswith('.txt'):
+        #    contents = await file.read()
+        #    InOutFileNames_obj.save_in_out_file_name(contents.decode())
+        #else:
+        InOutFileNames_obj.save_in_out_file_name(file.filename)
             
-        # Save the temporary file path
-        InOutFileNames_obj.save_in_out_file_name(temp_file_path)
-        logger.info(f"Saved file to: {temp_file_path}")
-        
-        return {"message": "File saved successfully", "file_path": temp_file_path}
+        logger.info(f"Saved file content/path")
+        return {"message": "File saved successfully", "file_path": file.filename}
     except Exception as e:
         logger.error(f"Error saving file: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -134,30 +132,17 @@ async def preprocess_data(file: UploadFile = File(...)):
         if file.filename.endswith('.wav'):
             return {"type": "audio", "audioPath": "/api/audio/preprocessed"}
             
-        temp_file_path = f"temp_{file.filename}"
-        
-        try:
-            contents = await file.read()
-            with open(temp_file_path, "wb") as f:
-                f.write(contents)
-            
-            lowercase_result = show_lowercase_data(temp_file_path)
-            stopwords_result = show_after_remove_stop_words_data(temp_file_path)
+        # For text files, use the saved content
+        if file.filename.endswith('.txt'):
+            text_content = InOutFileNames_obj.get_in_out_file_name()
+            lowercase_result = show_lowercase_data(text_content)
+            stopwords_result = show_after_remove_stop_words_data(text_content)
             
             return {
                 "lowercase_data": lowercase_result,
                 "after_remove_stop_words_data": stopwords_result
             }
             
-        except Exception as e:
-            logger.error(f"Error processing file: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise HTTPException(status_code=500, detail=str(e))
-            
-        finally:
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
-                
     except Exception as e:
         logger.error(f"Error in endpoint: {str(e)}")
         logger.error(traceback.format_exc())
@@ -169,30 +154,17 @@ async def augment_data(file: UploadFile = File(...)):
         if file.filename.endswith('.wav'):
             return {"type": "audio", "audioPath": "/api/audio/augmented"}
             
-        temp_file_path = f"temp_{file.filename}"
-        
-        try:
-            contents = await file.read()
-            with open(temp_file_path, "wb") as f:
-                f.write(contents)
-            
-            synonym_result = show_after_synonym_replacement_data(temp_file_path)
-            insertion_result = show_after_random_insertion_data(temp_file_path)
+        # For text files, use the saved content
+        if file.filename.endswith('.txt'):
+            text_content = InOutFileNames_obj.get_in_out_file_name()
+            synonym_result = show_after_synonym_replacement_data(text_content)
+            insertion_result = show_after_random_insertion_data(text_content)
             
             return {
                 "synonym_replacement_data": synonym_result,
                 "random_insertion_data": insertion_result
             }
             
-        except Exception as e:
-            logger.error(f"Error processing file: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise HTTPException(status_code=500, detail=str(e))
-            
-        finally:
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
-                
     except Exception as e:
         logger.error(f"Error in endpoint: {str(e)}")
         logger.error(traceback.format_exc())
@@ -206,28 +178,11 @@ async def original_data(file: UploadFile = File(...)):
         if file.filename.endswith('.wav'):
             return {"type": "audio", "audioPath": "/api/audio/original"}
         
-        # Create a temporary file with a unique name
-        temp_file_path = f"temp_{file.filename}"
-        
-        try:
-            contents = await file.read()
-            with open(temp_file_path, "wb") as f:
-                f.write(contents)
-            
-            result = show_original_data(temp_file_path)
-            
+        # For text files, use the saved content
+        if file.filename.endswith('.txt'):
+            result = show_original_data(InOutFileNames_obj.get_in_out_file_name())
             return {"output": result}
             
-        except Exception as e:
-            logger.error(f"Error processing file: {str(e)}")
-            logger.error(traceback.format_exc())  # Log the full error traceback
-            raise HTTPException(status_code=500, detail=str(e))
-            
-        finally:
-            # Clean up the temporary file
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
-                
     except Exception as e:
         logger.error(f"Error in endpoint: {str(e)}")
         logger.error(traceback.format_exc())
