@@ -51,28 +51,10 @@ class AudioDataset(Dataset):
 
         # Store the original signal before transformation for playback
         original_signal = signal.clone()
-        sf.write(self.file_path, original_signal[0], self.target_sample_rate)
 
         # Apply transformations (e.g., MFCC)
         signal = self.transformation(signal)
         return signal,label, audio_sample_path, self.target_sample_rate, original_signal, self.target_sample_rate  # Include original signal for visualization
-
-class PreProcessAudio(AudioDataset):
-    def RemoveNoiseFromAudio(self):
-        input_path = self.file_path
-        signal, sr = librosa.load(input_path, sr=None)
-        noise_sample = signal[0:int(0.5 * sr)]
-        reduced_noise_signal = nr.reduce_noise(y=signal, y_noise=noise_sample, sr=sr)
-        output_path = 'reduced_noise_output_audio.wav'
-        sf.write(output_path, reduced_noise_signal, sr)
-
-class AugmentAudio(AudioDataset):
-    def ChangePitchOfAudio(self,n_steps = 4):
-        input_path = self.file_path
-        signal, sr = librosa.load(input_path, sr=None)
-        shifted_signal = librosa.effects.pitch_shift(signal, sr=sr, n_steps=n_steps)
-        output_path = 'output_audio_pitch_shifted.wav'
-        sf.write(output_path, shifted_signal, sr)
 
 # Add at the top of the file
 logging.basicConfig(level=logging.INFO)
@@ -235,7 +217,7 @@ async def get_original_audio():
         signal,label, audio_sample_path, sr, original_signal, original_sr = next(iter(audio_loader))
 
         # Save the waveform in 16-bit PCM format
-        output_path = 'output_audio_int16.wav'
+        output_path = 'original.wav'
         torchaudio.save(output_path, original_signal[0], original_sr, encoding="PCM_S", bits_per_sample=16)
 
         #wave_obj = sa.WaveObject.from_wave_file(output_path)
@@ -261,7 +243,7 @@ async def get_preprocessed_audio():
     # Define transformations
     transformation = torchaudio.transforms.MFCC(sample_rate=16000, n_mfcc=40)
 
-    preprocess_audio_dataset = PreProcessAudio(
+    preprocess_audio_dataset = AudioDataset(
     file_path = InOutFileNames_obj.get_in_out_file_name(),
     transformation=transformation,
     target_sample_rate=16000
@@ -270,13 +252,22 @@ async def get_preprocessed_audio():
 
     signal,label, audio_sample_path, sr, original_signal, original_sr = next(iter(preprocess_audio_loader))
 
+    input_path1 = preprocess_audio_dataset.file_path
+    signal1, sr1 = librosa.load(input_path1, sr=None)
+
     # MFCC output will be 3D: [channels, features (MFCC coefficients), time_steps]
     # Take the first channel (mono) and transpose it to plot (time on x-axis)
     signal_mfcc = signal[0].numpy()  # Take the first channel
 
-    preprocess_audio_dataset.RemoveNoiseFromAudio();
+    original_signal = original_signal[0].numpy()
+    original_signal = original_signal.reshape(-1)
 
-    output_path = "reduced_noise_output_audio.wav"
+    #preprocess_audio_dataset.RemoveNoiseFromAudio();
+    noise_sample = original_signal[0:int(0.5 * original_sr)]
+    reduced_noise_signal = nr.reduce_noise(y=original_signal, y_noise=noise_sample, sr=original_sr.numpy()[0])
+    output_path = 'preprocessed.wav'
+    sf.write(output_path, reduced_noise_signal, original_sr.numpy()[0])
+
     #wave_obj = sa.WaveObject.from_wave_file(output_path)
 
     # Play the .wav file
@@ -296,7 +287,7 @@ async def get_augmented_audio():
     # Define transformations
     transformation = torchaudio.transforms.MFCC(sample_rate=16000, n_mfcc=40)
 
-    augment_audio_dataset = AugmentAudio(
+    augment_audio_dataset = AudioDataset(
     file_path = InOutFileNames_obj.get_in_out_file_name(),
     transformation=transformation,
     target_sample_rate=16000
@@ -309,9 +300,12 @@ async def get_augmented_audio():
     # Take the first channel (mono) and transpose it to plot (time on x-axis)
     signal_mfcc = signal[0].numpy()  # Take the first channel
 
-    augment_audio_dataset.ChangePitchOfAudio();
+    original_signal = original_signal[0].numpy()
+    original_signal = original_signal.reshape(-1)
 
-    output_path = "output_audio_pitch_shifted.wav"
+    shifted_signal = librosa.effects.pitch_shift(original_signal, sr=original_sr.numpy()[0], n_steps=4)
+    output_path = 'augmented.wav'
+    sf.write(output_path, shifted_signal, original_sr.numpy()[0])
     #wave_obj = sa.WaveObject.from_wave_file(output_path)
 
     # Play the .wav file
