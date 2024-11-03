@@ -14,12 +14,35 @@ document.addEventListener('DOMContentLoaded', function() {
     augmentBtn.classList.add('disabled');
 
     // File input handler
-    fileInput.addEventListener('change', function(e) {
+    fileInput.addEventListener('change', async function(e) {
         if (this.files.length > 0) {
             fileName.textContent = this.files[0].name;
-            originalBtn.classList.remove('disabled');
-            preprocessBtn.classList.remove('disabled');
-            augmentBtn.classList.remove('disabled');
+            
+            // Create FormData and send the file
+            const formData = new FormData();
+            formData.append('file', this.files[0]);
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/save_in_out_file_name/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('File saved:', data.file_path);
+                
+                // Enable buttons after successful upload
+                originalBtn.classList.remove('disabled');
+                preprocessBtn.classList.remove('disabled');
+                augmentBtn.classList.remove('disabled');
+            } catch (error) {
+                console.error('Error saving file:', error);
+                fileName.textContent = 'Error saving file';
+            }
         } else {
             fileName.textContent = '';
             originalBtn.classList.add('disabled');
@@ -32,12 +55,12 @@ document.addEventListener('DOMContentLoaded', function() {
     originalBtn.addEventListener('click', async function() {
         if (originalBtn.classList.contains('disabled')) return;
         
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        
         originalOutput.textContent = 'Processing...';
         
         try {
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
             const response = await fetch('http://localhost:8000/api/original', {
                 method: 'POST',
                 body: formData
@@ -50,9 +73,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (data.type === 'audio') {
+                const timestamp = new Date().getTime();
                 originalOutput.innerHTML = `
                     <audio controls>
-                        <source src="${data.audioPath}" type="audio/wav">
+                        <source src="${data.audioPath}?t=${timestamp}" type="audio/wav">
                         Your browser does not support the audio element.
                     </audio>
                 `;
@@ -69,12 +93,12 @@ document.addEventListener('DOMContentLoaded', function() {
     preprocessBtn.addEventListener('click', async function() {
         if (preprocessBtn.classList.contains('disabled')) return;
         
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        
         preprocessOutput.textContent = 'Processing...';
         
         try {
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
             const response = await fetch('http://localhost:8000/api/preprocess', {
                 method: 'POST',
                 body: formData
@@ -87,9 +111,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (data.type === 'audio') {
+                const timestamp = new Date().getTime();
                 preprocessOutput.innerHTML = `
                     <audio controls>
-                        <source src="${data.audioPath}" type="audio/wav">
+                        <source src="${data.audioPath}?t=${timestamp}" type="audio/wav">
                         Your browser does not support the audio element.
                     </audio>
                 `;
@@ -110,12 +135,12 @@ document.addEventListener('DOMContentLoaded', function() {
     augmentBtn.addEventListener('click', async function() {
         if (augmentBtn.classList.contains('disabled')) return;
         
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        
         augmentOutput.textContent = 'Processing...';
         
         try {
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
             const response = await fetch('http://localhost:8000/api/augment', {
                 method: 'POST',
                 body: formData
@@ -128,9 +153,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (data.type === 'audio') {
+                const timestamp = new Date().getTime();
                 augmentOutput.innerHTML = `
                     <audio controls>
-                        <source src="${data.audioPath}" type="audio/wav">
+                        <source src="${data.audioPath}?t=${timestamp}" type="audio/wav">
                         Your browser does not support the audio element.
                     </audio>
                 `;

@@ -110,19 +110,28 @@ InOutFileNames_obj = InOutFileNames()
 async def read_root():
     return FileResponse("../frontend/templates/index.html")
 
-#@app.post("/api/save_in_out_file_name/")
-#async def save_in_out_file_name(file: UploadFile = File(...)):
-#    file_location = f"uploaded_{file.filename}"
-#    with open(file_location, "wb") as f:
-#        f.write(await file.read())
-#    InOutFileNames_obj.save_in_out_file_name(file_location)
-#    return {"message": "File path saved successfully", "file_path": file_location}
+@app.post("/api/save_in_out_file_name/")
+async def save_in_out_file_name(file: UploadFile = File(...)):
+    try:
+        # Save the uploaded file to a temporary location
+        temp_file_path = f"temp_upload_{file.filename}"
+        contents = await file.read()
+        with open(temp_file_path, "wb") as f:
+            f.write(contents)
+            
+        # Save the temporary file path
+        InOutFileNames_obj.save_in_out_file_name(temp_file_path)
+        logger.info(f"Saved file to: {temp_file_path}")
+        
+        return {"message": "File saved successfully", "file_path": temp_file_path}
+    except Exception as e:
+        logger.error(f"Error saving file: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/preprocess")
 async def preprocess_data(file: UploadFile = File(...)):
     try:
         if file.filename.endswith('.wav'):
-            InOutFileNames_obj.save_in_out_file_name(file.filename)
             return {"type": "audio", "audioPath": "/api/audio/preprocessed"}
             
         temp_file_path = f"temp_{file.filename}"
@@ -158,7 +167,6 @@ async def preprocess_data(file: UploadFile = File(...)):
 async def augment_data(file: UploadFile = File(...)):
     try:
         if file.filename.endswith('.wav'):
-            InOutFileNames_obj.save_in_out_file_name(file.filename)
             return {"type": "audio", "audioPath": "/api/audio/augmented"}
             
         temp_file_path = f"temp_{file.filename}"
@@ -196,8 +204,6 @@ async def original_data(file: UploadFile = File(...)):
         logger.info(f"Received file: {file.filename}")
         
         if file.filename.endswith('.wav'):
-            InOutFileNames_obj.save_in_out_file_name(file.filename)
-            # For WAV files, return the path to the audio file
             return {"type": "audio", "audioPath": "/api/audio/original"}
         
         # Create a temporary file with a unique name
@@ -227,10 +233,10 @@ async def original_data(file: UploadFile = File(...)):
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-#@app.get("/api/get_in_out_file_name/")
-#async def get_in_out_file_name(InOutFileNames_objstore: InOutFileNames = Depends(lambda: InOutFileNames_obj)):
-#    input_path = InOutFileNames_objstore.get_in_out_file_name()
-#    return {"input_path": input_path}
+@app.get("/api/get_in_out_file_name/")
+async def get_in_out_file_name(InOutFileNames_objstore: InOutFileNames = Depends(lambda: InOutFileNames_obj)):
+    input_path = InOutFileNames_objstore.get_in_out_file_name()
+    return {"input_path": input_path}
 
 # New endpoints to serve audio files
 @app.get("/api/audio/original")
