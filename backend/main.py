@@ -25,6 +25,16 @@ import librosa.display
 import noisereduce as nr
 import soundfile as sf
 
+# Create directories if they don't exist
+os.makedirs("spectrograms", exist_ok=True)
+os.makedirs("temp_uploads", exist_ok=True)
+
+app = FastAPI()
+
+# Mount static directories
+app.mount("/static", StaticFiles(directory="../frontend/static"), name="static")
+app.mount("/spectrograms", StaticFiles(directory="spectrograms"), name="spectrograms")
+
 class AudioDataset(Dataset):
     def __init__(self, file_path, transformation, target_sample_rate):
         # Load the CSV file with annotations (meta/esc50.csv)
@@ -60,8 +70,6 @@ class AudioDataset(Dataset):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
-
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -73,6 +81,7 @@ app.add_middleware(
 
 # Mount the static files directory
 app.mount("/static", StaticFiles(directory="../frontend/static"), name="static")
+app.mount("/spectrograms", StaticFiles(directory="spectrograms"), name="spectrograms")
 
 class InOutFileNames:
     def __init__(self):
@@ -131,7 +140,11 @@ def cleanup_temp_files():
 async def preprocess_data(file: UploadFile = File(...)):
     try:
         if file.filename.endswith('.wav'):
-            return {"type": "audio", "audioPath": "/api/audio/preprocessed"}
+            return {
+                "type": "audio",
+                "audioPath": "/api/audio/preprocessed",
+                "spectrogramPath": "/spectrograms/preprocessed.png"
+            }
             
         # For text files, use the saved content
         if file.filename.endswith('.txt'):
@@ -153,7 +166,11 @@ async def preprocess_data(file: UploadFile = File(...)):
 async def augment_data(file: UploadFile = File(...)):
     try:
         if file.filename.endswith('.wav'):
-            return {"type": "audio", "audioPath": "/api/audio/augmented"}
+            return {
+                "type": "audio",
+                "audioPath": "/api/audio/augmented",
+                "spectrogramPath": "/spectrograms/augmented.png"
+            }
             
         # For text files, use the saved content
         if file.filename.endswith('.txt'):
@@ -174,12 +191,12 @@ async def augment_data(file: UploadFile = File(...)):
 @app.post("/api/original")
 async def original_data(file: UploadFile = File(...)):
     try:
-        logger.info(f"Received file: {file.filename}")
-        #cleanup_temp_files()  # Clean up old files
-        
         if file.filename.endswith('.wav'):
-            return {"type": "audio", "audioPath": "/api/audio/original"}
-        
+            return {
+                "type": "audio",
+                "audioPath": "/api/audio/original",
+                "spectrogramPath": "/spectrograms/original.png"
+            }
         # For text files, use the saved content
         if file.filename.endswith('.txt'):
             result = show_original_data(InOutFileNames_obj.get_in_out_file_name())
@@ -208,7 +225,7 @@ async def get_original_audio():
         
         # Create Dataset and DataLoader
         audio_dataset = AudioDataset(
-            file_path=file_path,
+            file_path=InOutFileNames_obj.get_in_out_file_name(),
             transformation=transformation,
             target_sample_rate=16000
         )
@@ -216,9 +233,16 @@ async def get_original_audio():
 
         signal,label, audio_sample_path, sr, original_signal, original_sr = next(iter(audio_loader))
 
+        original_signal = original_signal[0].numpy()
+        original_signal = original_signal.reshape(-1)
+
         # Save the waveform in 16-bit PCM format
         output_path = 'original.wav'
-        torchaudio.save(output_path, original_signal[0], original_sr, encoding="PCM_S", bits_per_sample=16)
+        sf.write(output_path, original_signal, original_sr.numpy()[0])
+
+        original_signal1, original_sr1 = torchaudio.load(output_path)
+
+        signal = audio_dataset.transformation(original_signal1)
 
         # MFCC output will be 3D: [channels, features (MFCC coefficients), time_steps]
         # Take the first channel (mono) and transpose it to plot (time on x-axis)
@@ -233,8 +257,11 @@ async def get_original_audio():
         plt.title(f"MFCC for {os.path.basename(audio_sample_path)}")
         plt.xlabel("Time")
         plt.ylabel("MFCC Coefficients")
-        plt.savefig('original.png', dpi=300, bbox_inches='tight')
-        plt.close()  # Close the plot to free memory
+
+        # Save spectrogram to the spectrograms directory
+        spectrogram_path = os.path.join('spectrograms', 'original.png')
+        plt.savefig(spectrogram_path, dpi=300, bbox_inches='tight')
+        plt.close()
 
         return FileResponse(
             output_path,
@@ -269,6 +296,10 @@ async def get_preprocessed_audio():
     output_path = 'preprocessed.wav'
     sf.write(output_path, reduced_noise_signal, original_sr.numpy()[0])
 
+    original_signal1, original_sr1 = torchaudio.load(output_path)
+
+    signal = preprocess_audio_dataset.transformation(original_signal1)
+
     # MFCC output will be 3D: [channels, features (MFCC coefficients), time_steps]
     # Take the first channel (mono) and transpose it to plot (time on x-axis)
     signal_mfcc = signal[0].numpy()
@@ -282,8 +313,11 @@ async def get_preprocessed_audio():
     plt.title(f"MFCC for {os.path.basename(audio_sample_path)}")
     plt.xlabel("Time")
     plt.ylabel("MFCC Coefficients")
-    plt.savefig('preprocessed.png', dpi=300, bbox_inches='tight')
-    plt.close()  # Close the plot to free memory
+
+    # Save spectrogram to the spectrograms directory
+    spectrogram_path = os.path.join('spectrograms', 'preprocessed.png')
+    plt.savefig(spectrogram_path, dpi=300, bbox_inches='tight')
+    plt.close()
 
     return FileResponse(
         output_path,
@@ -312,6 +346,10 @@ async def get_augmented_audio():
     output_path = 'augmented.wav'
     sf.write(output_path, shifted_signal, original_sr.numpy()[0])
 
+    original_signal1, original_sr1 = torchaudio.load(output_path)
+
+    signal = augment_audio_dataset.transformation(original_signal1)
+
     # MFCC output will be 3D: [channels, features (MFCC coefficients), time_steps]
     # Take the first channel (mono) and transpose it to plot (time on x-axis)
     signal_mfcc = signal[0].numpy()
@@ -325,13 +363,15 @@ async def get_augmented_audio():
     plt.title(f"MFCC for {os.path.basename(audio_sample_path)}")
     plt.xlabel("Time")
     plt.ylabel("MFCC Coefficients")
-    plt.savefig('augmented.png', dpi=300, bbox_inches='tight')
-    plt.close()  # Close the plot to free memory
+     # Save spectrogram to the spectrograms directory
+    spectrogram_path = os.path.join('spectrograms', 'augmented.png')
+    plt.savefig(spectrogram_path, dpi=300, bbox_inches='tight')
+    plt.close()
 
     return FileResponse(
         output_path,
         media_type="audio/wav",
-        filename="augmented1.wav"
+        filename="augmented.wav"
     )
 
 if __name__ == "__main__":

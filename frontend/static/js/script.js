@@ -75,17 +75,24 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.type === 'audio') {
                 const timestamp = new Date().getTime();
                 originalOutput.innerHTML = `
-                    <audio controls>
-                        <source src="${data.audioPath}?t=${timestamp}" type="audio/wav">
-                        Your browser does not support the audio element.
-                    </audio>
+                    <div class="audio-container">
+                        <audio controls>
+                            <source src="http://localhost:8000${data.audioPath}?t=${timestamp}" type="audio/wav">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                    <div class="spectrogram-container">
+                        <img src="http://localhost:8000${data.spectrogramPath}?t=${timestamp}" 
+                             alt="MFCC Spectrogram" 
+                             class="spectrogram-image">
+                    </div>
                 `;
             } else {
                 originalOutput.textContent = data.output;
             }
         } catch (error) {
             console.error('Error:', error);
-            originalOutput.textContent = `Error: ${error.message}\nPlease make sure the backend server is running on port 8000`;
+            originalOutput.textContent = `Error: ${error.message}`;
         }
     });
 
@@ -113,10 +120,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.type === 'audio') {
                 const timestamp = new Date().getTime();
                 preprocessOutput.innerHTML = `
-                    <audio controls>
-                        <source src="${data.audioPath}?t=${timestamp}" type="audio/wav">
-                        Your browser does not support the audio element.
-                    </audio>
+                    <div class="audio-container">
+                        <audio controls>
+                            <source src="http://localhost:8000${data.audioPath}?t=${timestamp}" type="audio/wav">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                    <div class="spectrogram-container">
+                        <img src="http://localhost:8000${data.spectrogramPath}?t=${timestamp}" 
+                             alt="MFCC Spectrogram" 
+                             class="spectrogram-image">
+                    </div>
                 `;
             } else {
                 preprocessOutput.textContent = 
@@ -155,10 +169,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.type === 'audio') {
                 const timestamp = new Date().getTime();
                 augmentOutput.innerHTML = `
-                    <audio controls>
-                        <source src="${data.audioPath}?t=${timestamp}" type="audio/wav">
-                        Your browser does not support the audio element.
-                    </audio>
+                    <div class="audio-container">
+                        <audio controls>
+                            <source src="http://localhost:8000${data.audioPath}?t=${timestamp}" type="audio/wav">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                    <div class="spectrogram-container">
+                        <img src="http://localhost:8000${data.spectrogramPath}?t=${timestamp}" 
+                             alt="MFCC Spectrogram" 
+                             class="spectrogram-image">
+                    </div>
                 `;
             } else {
                 augmentOutput.textContent = 

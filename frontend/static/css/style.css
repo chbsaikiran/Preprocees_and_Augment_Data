@@ -83,7 +83,9 @@ h1 {
     border-radius: 5px;
     padding: 15px;
     min-height: 200px;
+    max-height: 600px;
     background-color: #f9f9f9;
+    overflow-y: auto;
 }
 
 .output-box h3 {
@@ -101,4 +103,23 @@ h1 {
 .disabled {
     background-color: #bdc3c7;
     cursor: not-allowed;
+}
+
+.audio-container {
+    margin-bottom: 15px;
+}
+
+.spectrogram-container {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.spectrogram-image {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: block;
+    margin: 0 auto;
 } 
