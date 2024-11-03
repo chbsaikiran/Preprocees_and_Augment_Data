@@ -40,19 +40,22 @@ class AudioDataset(Dataset):
         # Get the file path and label from the CSV
         audio_sample_path = self.file_path
         label = 0
-        signal, sr = torchaudio.load(audio_sample_path)
+        original_signal, original_sr = torchaudio.load(audio_sample_path)
 
         # Resample if necessary
-        if sr != self.target_sample_rate:
-            resampler = torchaudio.transforms.Resample(orig_freq=sr, new_freq=self.target_sample_rate)
-            signal = resampler(signal)
+        if original_sr != self.target_sample_rate:
+            resampler = torchaudio.transforms.Resample(orig_freq=original_sr, new_freq=self.target_sample_rate)
+            signal = resampler(original_signal)
+        else:
+            signal = original_signal
 
         # Store the original signal before transformation for playback
         original_signal = signal.clone()
+        sf.write(self.file_path, original_signal[0], self.target_sample_rate)
 
         # Apply transformations (e.g., MFCC)
         signal = self.transformation(signal)
-        return signal, label, audio_sample_path, sr, original_signal, sr  # Include original signal for visualization
+        return signal,label, audio_sample_path, self.target_sample_rate, original_signal, self.target_sample_rate  # Include original signal for visualization
 
 class PreProcessAudio(AudioDataset):
     def RemoveNoiseFromAudio(self):
@@ -64,7 +67,7 @@ class PreProcessAudio(AudioDataset):
         sf.write(output_path, reduced_noise_signal, sr)
 
 class AugmentAudio(AudioDataset):
-    def ChangePitchOfAudio(self, n_steps = 4):
+    def ChangePitchOfAudio(self,n_steps = 4):
         input_path = self.file_path
         signal, sr = librosa.load(input_path, sr=None)
         shifted_signal = librosa.effects.pitch_shift(signal, sr=sr, n_steps=n_steps)
@@ -229,7 +232,7 @@ async def get_original_audio():
         )
         audio_loader = DataLoader(audio_dataset, batch_size=1, shuffle=True)
 
-        signal, label, audio_sample_path, sr, original_signal, original_sr = next(iter(audio_loader))
+        signal,label, audio_sample_path, sr, original_signal, original_sr = next(iter(audio_loader))
 
         # Save the waveform in 16-bit PCM format
         output_path = 'output_audio_int16.wav'
@@ -265,7 +268,7 @@ async def get_preprocessed_audio():
     )
     preprocess_audio_loader = DataLoader(preprocess_audio_dataset, batch_size=1, shuffle=True)
 
-    signal, label, audio_sample_path, sr, original_signal, original_sr = next(iter(preprocess_audio_loader))
+    signal,label, audio_sample_path, sr, original_signal, original_sr = next(iter(preprocess_audio_loader))
 
     # MFCC output will be 3D: [channels, features (MFCC coefficients), time_steps]
     # Take the first channel (mono) and transpose it to plot (time on x-axis)
