@@ -72,7 +72,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const data = await response.json();
             
-            if (data.type === 'audio') {
+            if (data.type === 'image') {
+                const timestamp = new Date().getTime();
+                originalOutput.innerHTML = `
+                    <div class="image-container">
+                        <img src="http://localhost:8000${data.imagePath}?t=${timestamp}" 
+                             alt="Original Image" 
+                             class="processed-image">
+                    </div>
+                `;
+            } else if (data.type === 'audio') {
                 const timestamp = new Date().getTime();
                 originalOutput.innerHTML = `
                     <div class="audio-container">
@@ -117,7 +126,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const data = await response.json();
             
-            if (data.type === 'audio') {
+            if (data.type === 'image') {
+                const timestamp = new Date().getTime();
+                preprocessOutput.innerHTML = `
+                    <div class="image-container">
+                        <img src="http://localhost:8000${data.imagePath}?t=${timestamp}" 
+                             alt="Processed Image" 
+                             class="processed-image">
+                    </div>
+                `;
+            } else if (data.type === 'audio') {
                 const timestamp = new Date().getTime();
                 preprocessOutput.innerHTML = `
                     <div class="audio-container">
@@ -166,7 +184,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const data = await response.json();
             
-            if (data.type === 'audio') {
+            if (data.type === 'image') {
+                const timestamp = new Date().getTime();
+                augmentOutput.innerHTML = `
+                    <div class="image-container">
+                        <img src="http://localhost:8000${data.imagePath}?t=${timestamp}" 
+                             alt="Augmented Image" 
+                             class="processed-image">
+                    </div>
+                `;
+            } else if (data.type === 'audio') {
                 const timestamp = new Date().getTime();
                 augmentOutput.innerHTML = `
                     <div class="audio-container">

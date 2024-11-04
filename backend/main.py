@@ -24,16 +24,20 @@ import librosa
 import librosa.display
 import noisereduce as nr
 import soundfile as sf
+from PIL import Image
 
 # Create directories if they don't exist
 os.makedirs("spectrograms", exist_ok=True)
 os.makedirs("temp_uploads", exist_ok=True)
+os.makedirs("processed_images", exist_ok=True)
 
 app = FastAPI()
 
-# Mount static directories
+# Update the mount statements (around line 36-39)
 app.mount("/static", StaticFiles(directory="../frontend/static"), name="static")
 app.mount("/spectrograms", StaticFiles(directory="spectrograms"), name="spectrograms")
+app.mount("/processed_images", StaticFiles(directory="processed_images"), name="processed_images")
+app.mount("/temp_uploads", StaticFiles(directory="temp_uploads"), name="temp_uploads")  # Add this line
 
 class AudioDataset(Dataset):
     def __init__(self, file_path, transformation, target_sample_rate):
@@ -66,6 +70,31 @@ class AudioDataset(Dataset):
         signal = self.transformation(signal)
         return signal,label, audio_sample_path, self.target_sample_rate, original_signal, self.target_sample_rate  # Include original signal for visualization
 
+# Add these functions after the imports and before the endpoints
+def convert_to_grayscale(input_path: str, output_path: str):
+    try:
+        with Image.open(input_path) as img:
+            # Convert to grayscale
+            grayscale_img = img.convert('L')
+            # Save to processed_images directory
+            save_path = os.path.join('processed_images', output_path)
+            grayscale_img.save(save_path)
+    except Exception as e:
+        logger.error(f"Error in convert_to_grayscale: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+def tilt_image(input_path: str, output_path: str, angle: float):
+    try:
+        with Image.open(input_path) as img:
+            # Rotate the image
+            rotated_img = img.rotate(angle, expand=True)
+            # Save to processed_images directory
+            save_path = os.path.join('processed_images', output_path)
+            rotated_img.save(save_path)
+    except Exception as e:
+        logger.error(f"Error in tilt_image: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Add at the top of the file
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -79,9 +108,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount the static files directory
+# Update the mount statements (around line 36-39)
 app.mount("/static", StaticFiles(directory="../frontend/static"), name="static")
 app.mount("/spectrograms", StaticFiles(directory="spectrograms"), name="spectrograms")
+app.mount("/processed_images", StaticFiles(directory="processed_images"), name="processed_images")
+app.mount("/temp_uploads", StaticFiles(directory="temp_uploads"), name="temp_uploads")  # Add this line
 
 class InOutFileNames:
     def __init__(self):
@@ -139,7 +170,17 @@ def cleanup_temp_files():
 @app.post("/api/preprocess")
 async def preprocess_data(file: UploadFile = File(...)):
     try:
-        if file.filename.endswith('.wav'):
+        content_type = file.content_type
+        if content_type.startswith('image/'):
+            input_path = InOutFileNames_obj.get_in_out_file_name()
+            output_path = 'grayscale_image.png'
+            convert_to_grayscale(input_path, output_path)
+            
+            return {
+                "type": "image",
+                "imagePath": f"/processed_images/{output_path}"
+            }
+        elif file.filename.endswith('.wav'):
             return {
                 "type": "audio",
                 "audioPath": "/api/audio/preprocessed",
@@ -165,7 +206,17 @@ async def preprocess_data(file: UploadFile = File(...)):
 @app.post("/api/augment")
 async def augment_data(file: UploadFile = File(...)):
     try:
-        if file.filename.endswith('.wav'):
+        content_type = file.content_type
+        if content_type.startswith('image/'):
+            input_path = InOutFileNames_obj.get_in_out_file_name()
+            output_path = 'tilted_image.png'
+            tilt_image(input_path, output_path, angle=45)  # 45-degree rotation
+            
+            return {
+                "type": "image",
+                "imagePath": f"/processed_images/{output_path}"
+            }
+        elif file.filename.endswith('.wav'):
             return {
                 "type": "audio",
                 "audioPath": "/api/audio/augmented",
@@ -191,7 +242,22 @@ async def augment_data(file: UploadFile = File(...)):
 @app.post("/api/original")
 async def original_data(file: UploadFile = File(...)):
     try:
-        if file.filename.endswith('.wav'):
+        content_type = file.content_type
+        if content_type.startswith('image/'):
+            # Save the original image
+            file_path = os.path.join('temp_uploads', file.filename)
+            with open(file_path, "wb") as f:
+                content = await file.read()
+                f.write(content)
+            
+            # Save it as the input file for later processing (using correct method name)
+            InOutFileNames_obj.save_in_out_file_name(file_path)  # Changed from set_in_out_file_name
+            
+            return {
+                "type": "image",
+                "imagePath": f"/temp_uploads/{file.filename}"
+            }
+        elif file.filename.endswith('.wav'):
             return {
                 "type": "audio",
                 "audioPath": "/api/audio/original",
