@@ -25,11 +25,14 @@ import librosa.display
 import noisereduce as nr
 import soundfile as sf
 from PIL import Image
+import trimesh
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 # Create directories if they don't exist
 os.makedirs("spectrograms", exist_ok=True)
 os.makedirs("temp_uploads", exist_ok=True)
 os.makedirs("processed_images", exist_ok=True)
+os.makedirs("processed_3d_images", exist_ok=True)
 
 app = FastAPI()
 
@@ -37,6 +40,7 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="../frontend/static"), name="static")
 app.mount("/spectrograms", StaticFiles(directory="spectrograms"), name="spectrograms")
 app.mount("/processed_images", StaticFiles(directory="processed_images"), name="processed_images")
+app.mount("/processed_3d_images", StaticFiles(directory="processed_3d_images"), name="processed_3d_images")
 app.mount("/temp_uploads", StaticFiles(directory="temp_uploads"), name="temp_uploads")  # Add this line
 
 class AudioDataset(Dataset):
@@ -69,6 +73,66 @@ class AudioDataset(Dataset):
         # Apply transformations (e.g., MFCC)
         signal = self.transformation(signal)
         return signal,label, audio_sample_path, self.target_sample_rate, original_signal, self.target_sample_rate  # Include original signal for visualization
+
+class SingleSampleDataset(Dataset):
+    def __init__(self, sample_file):
+        self.sample_file = sample_file
+
+    def __len__(self):
+        return 1  # Only one sample
+
+    def __getitem__(self, idx):
+        # Load the mesh using trimesh
+        mesh = trimesh.load(self.sample_file)
+        vertices = torch.tensor(mesh.vertices, dtype=torch.float)
+        faces = torch.tensor(mesh.faces, dtype=torch.long)
+        label = "cube"  # Set a dummy label for this example
+        return {'vertices': vertices, 'faces': faces, 'label': label}
+
+# Preprocess function to normalize the mesh
+def preprocess_mesh(vertices):
+    # Center the mesh at the origin
+    centroid = vertices.mean(axis=0)
+    vertices -= centroid
+
+    # Scale the mesh to fit within a unit sphere
+    max_distance = np.linalg.norm(vertices, axis=1).max()
+    vertices /= max_distance
+
+    return vertices
+
+# Augmentation function to apply a random rotation to the mesh
+def augment_mesh(vertices):
+    # Create a random rotation matrix
+    rotation_axis = np.random.rand(3) - 0.5  # Random vector in 3D space
+    rotation_axis /= np.linalg.norm(rotation_axis)  # Normalize to unit vector
+    angle = np.random.uniform(0, 2 * np.pi)  # Random angle in radians
+
+    rotation_matrix = trimesh.transformations.rotation_matrix(
+        angle, rotation_axis
+    )[:3, :3]  # Extract 3x3 rotation part
+
+    # Apply rotation to vertices
+    vertices = vertices @ rotation_matrix.T
+
+    return vertices
+
+# Function to visualize the mesh
+def visualize_mesh(vertices, faces,three_d_path):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Create a Poly3DCollection object for the faces
+    poly3d = [[vertices[face[0]], vertices[face[1]], vertices[face[2]]] for face in faces]
+    ax.add_collection3d(Poly3DCollection(poly3d, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.25))
+
+    # Set plot limits
+    ax.set_xlim([vertices[:, 0].min(), vertices[:, 0].max()])
+    ax.set_ylim([vertices[:, 1].min(), vertices[:, 1].max()])
+    ax.set_zlim([vertices[:, 2].min(), vertices[:, 2].max()])
+
+    plt.savefig(os.path.join('processed_3d_images', three_d_path), dpi=300, bbox_inches='tight')
+    plt.close()
 
 # Add these functions after the imports and before the endpoints
 def convert_to_grayscale(input_path: str, output_path: str):
@@ -112,6 +176,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="../frontend/static"), name="static")
 app.mount("/spectrograms", StaticFiles(directory="spectrograms"), name="spectrograms")
 app.mount("/processed_images", StaticFiles(directory="processed_images"), name="processed_images")
+app.mount("/processed_3d_images", StaticFiles(directory="processed_3d_images"), name="processed_3d_images")
 app.mount("/temp_uploads", StaticFiles(directory="temp_uploads"), name="temp_uploads")  # Add this line
 
 class InOutFileNames:
@@ -186,6 +251,21 @@ async def preprocess_data(file: UploadFile = File(...)):
                 "audioPath": "/api/audio/preprocessed",
                 "spectrogramPath": "/spectrograms/preprocessed.png"
             }
+        elif file.filename.endswith('.off'):  # 3D file case
+            sample_dataset = SingleSampleDataset(sample_file=InOutFileNames_obj.get_in_out_file_name())
+            sample_loader = DataLoader(sample_dataset, batch_size=1, shuffle=False)
+            three_d_path = "preprocessed_3d.png"
+            
+            for data in sample_loader:
+                vertices = data['vertices'][0].numpy()
+                vertices = preprocess_mesh(vertices)
+                faces = data['faces'][0].numpy()
+                visualize_mesh(vertices, faces, three_d_path)
+            
+            return {
+                "type": "3d",
+                "imagePath": f"/processed_3d_images/{three_d_path}"
+            }
             
         # For text files, use the saved content
         if file.filename.endswith('.txt'):
@@ -197,6 +277,16 @@ async def preprocess_data(file: UploadFile = File(...)):
                 "lowercase_data": lowercase_result,
                 "after_remove_stop_words_data": stopwords_result
             }
+        else:
+            sample_dataset = SingleSampleDataset(sample_file=InOutFileNames_obj.get_in_out_file_name())  # Adjust path accordingly
+            sample_loader = DataLoader(sample_dataset, batch_size=1, shuffle=False)
+            three_d_path = "preprocessed_3d.png"
+            # Iterate through the dataloader and visualize the 3D sample
+            for data in sample_loader:
+                vertices = data['vertices'][0].numpy()  # Convert from tensor to numpy for plotting
+                vertices = preprocess_mesh(vertices)
+                faces = data['faces'][0].numpy()  # Convert from tensor to numpy for plotting
+                visualize_mesh(vertices, faces)
             
     except Exception as e:
         logger.error(f"Error in endpoint: {str(e)}")
@@ -228,6 +318,21 @@ async def augment_data(file: UploadFile = File(...), angle: str = Form(default="
                 "audioPath": "/api/audio/augmented",
                 "spectrogramPath": "/spectrograms/augmented.png"
             }
+        elif file.filename.endswith('.off'):  # 3D file case
+            sample_dataset = SingleSampleDataset(sample_file=InOutFileNames_obj.get_in_out_file_name())
+            sample_loader = DataLoader(sample_dataset, batch_size=1, shuffle=False)
+            three_d_path = "augmented_3d.png"
+            
+            for data in sample_loader:
+                vertices = data['vertices'][0].numpy()
+                vertices = augment_mesh(vertices)
+                faces = data['faces'][0].numpy()
+                visualize_mesh(vertices, faces, three_d_path)
+            
+            return {
+                "type": "3d",
+                "imagePath": f"/processed_3d_images/{three_d_path}"
+            }
             
         # For text files, use the saved content
         if file.filename.endswith('.txt'):
@@ -239,6 +344,16 @@ async def augment_data(file: UploadFile = File(...), angle: str = Form(default="
                 "synonym_replacement_data": synonym_result,
                 "random_insertion_data": insertion_result
             }
+        else:
+            sample_dataset = SingleSampleDataset(sample_file=InOutFileNames_obj.get_in_out_file_name())  # Adjust path accordingly
+            sample_loader = DataLoader(sample_dataset, batch_size=1, shuffle=False)
+            three_d_path = "augmented_3d.png"
+            # Iterate through the dataloader and visualize the 3D sample
+            for data in sample_loader:
+                vertices = data['vertices'][0].numpy()  # Convert from tensor to numpy for plotting
+                vertices = augment_mesh(vertices)
+                faces = data['faces'][0].numpy()  # Convert from tensor to numpy for plotting
+                visualize_mesh(vertices, faces,three_d_path)
             
     except Exception as e:
         logger.error(f"Error in endpoint: {str(e)}")
@@ -269,10 +384,34 @@ async def original_data(file: UploadFile = File(...)):
                 "audioPath": "/api/audio/original",
                 "spectrogramPath": "/spectrograms/original.png"
             }
+        elif file.filename.endswith('.off'):  # 3D file case
+            sample_dataset = SingleSampleDataset(sample_file=InOutFileNames_obj.get_in_out_file_name())
+            sample_loader = DataLoader(sample_dataset, batch_size=1, shuffle=False)
+            three_d_path = "original_3d.png"
+            
+            for data in sample_loader:
+                vertices = data['vertices'][0].numpy()
+                faces = data['faces'][0].numpy()
+                visualize_mesh(vertices, faces, three_d_path)
+            
+            return {
+                "type": "3d",
+                "imagePath": f"/processed_3d_images/{three_d_path}"
+            }
+
         # For text files, use the saved content
         if file.filename.endswith('.txt'):
             result = show_original_data(InOutFileNames_obj.get_in_out_file_name())
             return {"output": result}
+        else:
+            sample_dataset = SingleSampleDataset(sample_file=InOutFileNames_obj.get_in_out_file_name())  # Adjust path accordingly
+            sample_loader = DataLoader(sample_dataset, batch_size=1, shuffle=False)
+            three_d_path = "original_3d.png"
+            # Iterate through the dataloader and visualize the 3D sample
+            for data in sample_loader:
+                vertices = data['vertices'][0].numpy()  # Convert from tensor to numpy for plotting
+                faces = data['faces'][0].numpy()  # Convert from tensor to numpy for plotting
+                visualize_mesh(vertices, faces,three_d_path)
             
     except Exception as e:
         logger.error(f"Error in endpoint: {str(e)}")

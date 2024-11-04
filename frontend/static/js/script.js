@@ -23,10 +23,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const imageControls = document.getElementById('imageControls');
             imageControls.style.display = file.type.startsWith('image/') ? 'block' : 'none';
             
-            // Enable buttons
-            originalBtn.classList.remove('disabled');
-            preprocessBtn.classList.remove('disabled');
-            augmentBtn.classList.remove('disabled');
+            // Enable buttons for all supported file types
+            if (file.type.startsWith('image/') || 
+                file.type.startsWith('audio/') || 
+                file.name.endsWith('.txt') ||
+                file.name.endsWith('.off')) {  // Add .off extension check
+                originalBtn.classList.remove('disabled');
+                preprocessBtn.classList.remove('disabled');
+                augmentBtn.classList.remove('disabled');
+            }
             
             // Create FormData and send the file
             const formData = new FormData();
@@ -77,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const data = await response.json();
             
-            if (data.type === 'image') {
+            if (data.type === 'image' || data.type === '3d') {  // Handle both image and 3D
                 const timestamp = new Date().getTime();
                 originalOutput.innerHTML = `
                     <div class="image-container">
@@ -131,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const data = await response.json();
             
-            if (data.type === 'image') {
+            if (data.type === 'image' || data.type === '3d') {  // Handle both image and 3D
                 const timestamp = new Date().getTime();
                 preprocessOutput.innerHTML = `
                     <div class="image-container">
@@ -197,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const data = await response.json();
             
-            if (data.type === 'image') {
+            if (data.type === 'image' || data.type === '3d') {  // Handle both image and 3D
                 const timestamp = new Date().getTime();
                 augmentOutput.innerHTML = `
                     <div class="image-container">
