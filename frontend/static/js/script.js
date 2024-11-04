@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Configuration
+    const SERVER_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : `http://${window.location.hostname}:8000`; 
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
     const originalBtn = document.getElementById('originalBtn');
@@ -38,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('file', file);
             
             try {
-                const response = await fetch('http://localhost:8000/api/save_in_out_file_name/', {
+                const response = await fetch(`${SERVER_URL}/api/save_in_out_file_name/`, {
                     method: 'POST',
                     body: formData
                 });
@@ -71,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
             
-            const response = await fetch('http://localhost:8000/api/original', {
+            const response = await fetch(`${SERVER_URL}/api/original`, {
                 method: 'POST',
                 body: formData
             });
@@ -86,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const timestamp = new Date().getTime();
                 originalOutput.innerHTML = `
                     <div class="image-container">
-                        <img src="http://localhost:8000${data.imagePath}?t=${timestamp}" 
+                        <img src="${SERVER_URL}${data.imagePath}?t=${timestamp}" 
                              alt="Original Image" 
                              class="processed-image">
                     </div>
@@ -96,12 +98,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 originalOutput.innerHTML = `
                     <div class="audio-container">
                         <audio controls>
-                            <source src="http://localhost:8000${data.audioPath}?t=${timestamp}" type="audio/wav">
+                            <source src="${SERVER_URL}${data.audioPath}?t=${timestamp}" type="audio/wav">
                             Your browser does not support the audio element.
                         </audio>
                     </div>
                     <div class="spectrogram-container">
-                        <img src="http://localhost:8000${data.spectrogramPath}?t=${timestamp}" 
+                        <img src="${SERVER_URL}${data.spectrogramPath}?t=${timestamp}" 
                              alt="MFCC Spectrogram" 
                              class="spectrogram-image">
                     </div>
@@ -125,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
             
-            const response = await fetch('http://localhost:8000/api/preprocess', {
+            const response = await fetch(`${SERVER_URL}/api/preprocess`, {
                 method: 'POST',
                 body: formData
             });
@@ -140,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const timestamp = new Date().getTime();
                 preprocessOutput.innerHTML = `
                     <div class="image-container">
-                        <img src="http://localhost:8000${data.imagePath}?t=${timestamp}" 
+                        <img src="${SERVER_URL}${data.imagePath}?t=${timestamp}" 
                              alt="Processed Image" 
                              class="processed-image">
                     </div>
@@ -150,12 +152,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 preprocessOutput.innerHTML = `
                     <div class="audio-container">
                         <audio controls>
-                            <source src="http://localhost:8000${data.audioPath}?t=${timestamp}" type="audio/wav">
+                            <source src="${SERVER_URL}${data.audioPath}?t=${timestamp}" type="audio/wav">
                             Your browser does not support the audio element.
                         </audio>
                     </div>
                     <div class="spectrogram-container">
-                        <img src="http://localhost:8000${data.spectrogramPath}?t=${timestamp}" 
+                        <img src="${SERVER_URL}${data.spectrogramPath}?t=${timestamp}" 
                              alt="MFCC Spectrogram" 
                              class="spectrogram-image">
                     </div>
@@ -189,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Sending angle:', angleValue);
             }
             
-            const response = await fetch('http://localhost:8000/api/augment', {
+            const response = await fetch(`${SERVER_URL}/api/augment`, {
                 method: 'POST',
                 body: formData
             });
@@ -206,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const timestamp = new Date().getTime();
                 augmentOutput.innerHTML = `
                     <div class="image-container">
-                        <img src="http://localhost:8000${data.imagePath}?t=${timestamp}" 
+                        <img src="${SERVER_URL}${data.imagePath}?t=${timestamp}" 
                              alt="Augmented Image" 
                              class="processed-image">
                     </div>
@@ -216,12 +218,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 augmentOutput.innerHTML = `
                     <div class="audio-container">
                         <audio controls>
-                            <source src="http://localhost:8000${data.audioPath}?t=${timestamp}" type="audio/wav">
+                            <source src="${SERVER_URL}${data.audioPath}?t=${timestamp}" type="audio/wav">
                             Your browser does not support the audio element.
                         </audio>
                     </div>
                     <div class="spectrogram-container">
-                        <img src="http://localhost:8000${data.spectrogramPath}?t=${timestamp}" 
+                        <img src="${SERVER_URL}${data.spectrogramPath}?t=${timestamp}" 
                              alt="MFCC Spectrogram" 
                              class="spectrogram-image">
                     </div>

@@ -36,6 +36,14 @@ os.makedirs("processed_3d_images", exist_ok=True)
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Update the mount statements (around line 36-39)
 app.mount("/static", StaticFiles(directory="../frontend/static"), name="static")
 app.mount("/spectrograms", StaticFiles(directory="spectrograms"), name="spectrograms")
@@ -162,15 +170,6 @@ def tilt_image(input_path: str, output_path: str, angle: float):
 # Add at the top of the file
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Update the mount statements (around line 36-39)
 app.mount("/static", StaticFiles(directory="../frontend/static"), name="static")
