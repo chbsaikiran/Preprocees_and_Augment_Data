@@ -35,6 +35,11 @@
 
             <div class="process-box">
                 <button id="augmentBtn" class="action-button">Augment Data</button>
+                <div id="imageControls" style="display: none; margin-bottom: 15px;">
+                    <label for="rotationAngle">Rotation Angle (degrees):</label>
+                    <input type="number" id="rotationAngle" value="45" min="-360" max="360" step="1" 
+                           style="width: 80px; margin-left: 10px;">
+                </div>
                 <div id="augmentOutput" class="output-box">
                     <h3>Augmentation Output</h3>
                     <div class="output-content"></div>

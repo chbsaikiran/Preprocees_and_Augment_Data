@@ -148,3 +148,32 @@ h1 {
     border-radius: 5px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
+
+/* Add at the end of the file */
+#imageControls {
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 5px;
+    display: inline-block;
+    margin: 10px auto;  /* Center the control */
+    width: fit-content;  /* Make width fit content */
+}
+
+#imageControls label {
+    color: #2c3e50;
+    font-weight: bold;
+    display: inline-block;  /* Keep label and input on same line */
+}
+
+#rotationAngle {
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#rotationAngle:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+}

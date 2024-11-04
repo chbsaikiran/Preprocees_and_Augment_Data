@@ -16,11 +16,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // File input handler
     fileInput.addEventListener('change', async function(e) {
         if (this.files.length > 0) {
-            fileName.textContent = this.files[0].name;
+            const file = this.files[0];
+            fileName.textContent = file.name;
+            
+            // Show/hide angle input based on file type
+            const imageControls = document.getElementById('imageControls');
+            imageControls.style.display = file.type.startsWith('image/') ? 'block' : 'none';
+            
+            // Enable buttons
+            originalBtn.classList.remove('disabled');
+            preprocessBtn.classList.remove('disabled');
+            augmentBtn.classList.remove('disabled');
             
             // Create FormData and send the file
             const formData = new FormData();
-            formData.append('file', this.files[0]);
+            formData.append('file', file);
             
             try {
                 const response = await fetch('http://localhost:8000/api/save_in_out_file_name/', {
@@ -34,11 +44,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const data = await response.json();
                 console.log('File saved:', data.file_path);
-                
-                // Enable buttons after successful upload
-                originalBtn.classList.remove('disabled');
-                preprocessBtn.classList.remove('disabled');
-                augmentBtn.classList.remove('disabled');
             } catch (error) {
                 console.error('Error saving file:', error);
                 fileName.textContent = 'Error saving file';
@@ -166,12 +171,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Augment button handler
     augmentBtn.addEventListener('click', async function() {
         if (augmentBtn.classList.contains('disabled')) return;
-        
         augmentOutput.textContent = 'Processing...';
         
         try {
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
+            
+            // Add rotation angle only for images
+            if (fileInput.files[0].type.startsWith('image/')) {
+                const angleValue = document.getElementById('rotationAngle').value;
+                formData.append('angle', angleValue);
+                console.log('Sending angle:', angleValue);
+            }
             
             const response = await fetch('http://localhost:8000/api/augment', {
                 method: 'POST',
@@ -179,6 +190,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Server error:', errorText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -204,13 +204,19 @@ async def preprocess_data(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/augment")
-async def augment_data(file: UploadFile = File(...)):
+async def augment_data(file: UploadFile = File(...), angle: str = Form(default="45")):  # Make angle optional with default value
     try:
         content_type = file.content_type
         if content_type.startswith('image/'):
             input_path = InOutFileNames_obj.get_in_out_file_name()
             output_path = 'tilted_image.png'
-            tilt_image(input_path, output_path, angle=45)  # 45-degree rotation
+            
+            # Debug logging
+            logger.info(f"Raw angle received: {angle}")
+            angle_float = float(angle)
+            logger.info(f"Converted angle: {angle_float}")
+            
+            tilt_image(input_path, output_path, angle=angle_float)
             
             return {
                 "type": "image",
