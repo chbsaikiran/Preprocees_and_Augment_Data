@@ -73,6 +73,8 @@ class AugmentText(TextDataset):
         idx = 0
         for lines in self.lines:
             words = word_tokenize(lines)
+            if not words:
+                continue
             new_words = words.copy()
             random.shuffle(words)
             
@@ -110,6 +112,8 @@ class AugmentText(TextDataset):
         idx = 0
         for lines in self.lines:
             words = word_tokenize(lines)
+            if not words:
+                continue
             for _ in range(n):
                 new_word = self.get_random_synonym(words)
                 if new_word:
