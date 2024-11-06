@@ -109,7 +109,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
             } else {
-                originalOutput.textContent = data.output;
+                originalOutput.innerHTML = `
+                    <div class="text-output">
+                        ${data.output}
+                    </div>
+                `;
             }
         } catch (error) {
             console.error('Error:', error);
@@ -163,11 +167,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
             } else {
-                preprocessOutput.textContent = 
-                    "Lowercase Data:\n" +
-                    data.lowercase_data + 
-                    "\n\nAfter Remove Stop Words:\n" +
-                    data.after_remove_stop_words_data;
+                preprocessOutput.innerHTML = `
+                    <div class="text-output">
+                        Lowercase Data:
+                        ${data.lowercase_data}
+                        
+                        After Remove Stop Words:
+                        ${data.after_remove_stop_words_data}
+                    </div>
+                `;
             }
         } catch (error) {
             console.error('Error:', error);
